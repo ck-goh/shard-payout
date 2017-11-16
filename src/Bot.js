@@ -3,13 +3,14 @@ import XLSX from 'xlsx'
 
 import path from 'path'
 
-const channelId = '345179574033842177'
+const channelId = process.env.CHANNEL_ID;
 
-export default class Bot {
+class Bot {
   constructor (botToken) {
     this.main = this.main.bind(this)
 
     this.botToken = botToken
+    console.log(botToken);
 
     this.client = new Discord.Client()
     this.client.on("ready", async () => {
@@ -65,10 +66,7 @@ export default class Bot {
       const user = this.sheet[i]
       this.mates.push({
         name: user.Name,
-        payout: parseInt(user.UTC.substr(0,2)),
-        discordId: user.ID,
-        flag: user.Flag,
-        swgoh: user.SWGOH
+        payout: parseInt(user.UTC.substr(0,2))
       })
     }
     const matesByTime = {}
@@ -114,7 +112,7 @@ export default class Bot {
       let fieldName = String(this.mates[i].time)
       let fieldText = ''
       for (const mate of this.mates[i].mates) {
-        fieldText += `${mate.flag} [${mate.name}](${mate.swgoh})\n` // Discord automatically trims messages
+        fieldText += `${mate.name}\n` // Discord automatically trims messages
       }
       embed.addField(fieldName, fieldText, true)
     }
@@ -122,3 +120,5 @@ export default class Bot {
     await this.message.edit({embed})
   }
 }
+
+export default Bot;
