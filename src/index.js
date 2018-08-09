@@ -1,6 +1,6 @@
 import Bot from './Bot'
 import { botToken } from './secret'
 
-console.log(botToken);
+const payouts = require('./data/payouts.json')
 
-new Bot(botToken)
+new Bot(botToken, payouts)

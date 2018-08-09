@@ -1,16 +1,14 @@
 import Discord from 'discord.js'
-import XLSX from 'xlsx'
 
 import path from 'path'
 
 const channelId = process.env.CHANNEL_ID;
 
 class Bot {
-  constructor (botToken) {
+  constructor (botToken, sheet) {
     this.main = this.main.bind(this)
 
     this.botToken = botToken
-    console.log(botToken);
 
     this.client = new Discord.Client()
     this.client.on("ready", async () => {
@@ -20,10 +18,20 @@ class Bot {
       await this.initializeBot()
       console.log('Bot initialized')
     })
+    this.client.on("error", async e => {
+      console.log(e);
+    })
+    this.client.on("reconnecting", async () => {
+      console.log("Bot reconnecting");
+    })
+    this.client.on("disconnect", async e => {
+      console.log(e);
+      process.exit(1);
+    })
 
     this.client.login(botToken)
 
-    this.sheet = XLSX.utils.sheet_to_json(XLSX.readFile(path.resolve(__dirname, '../SWGoH_Shard.xlsx')).Sheets.Sheet1)
+    this.sheet = sheet
     this.parseXlsx()
 
     this.main()
