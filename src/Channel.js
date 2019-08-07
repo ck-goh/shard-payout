@@ -1,10 +1,13 @@
-import Discord from 'discord.js'
+import Discord from 'discord.js';
+
+import * as fs from 'fs';
 
 class Channel {
     constructor(client, name, channelId) {
         this.client = client;
         this.channelId = channelId;
-        this.data = require('./data/' + name + '/payouts.json');
+        this.source = './data/' + name + '/payouts.json';
+        this.data = JSON.parse(fs.readFileSync(this.source));
         this.channel = this.client.channels.get(this.channelId);
 
         this.parseXlsx()
@@ -14,14 +17,14 @@ class Channel {
         const messages = await this.channel.fetchMessages()
         if (messages.array().length === 0) {
             try {
-                this.message = await chan.send({embed: new Discord.RichEmbed()})
+                this.message = await this.channel.send({embed: new Discord.RichEmbed()})
             } catch (err) {
                 console.log(err)
             }
         } else {
             if (messages.first().embeds.length === 0) {
                 await messages.first().delete()
-                this.message = await chan.send({embed: new Discord.RichEmbed()})
+                this.message = await this.channel.send({embed: new Discord.RichEmbed()})
             } else {
                 this.message = messages.first()
             }
@@ -98,6 +101,50 @@ class Channel {
         }
         embed.setDescription(desc)
         await this.message.edit({embed})
+    }
+
+    saveData() {
+        fs.writeFileSync(this.source, JSON.stringify(this.data));
+        this.parseXlsx();
+        this.process();
+    }
+
+    execute(cmd) {
+        const [time, name] = cmd.split(/(?<=^\S+)\s/);        // split on first space
+        if (time === "remove") {
+            const removed = this.data.filter(u => this.isName(u.Name, name));
+            if (removed.length > 0) {
+                this.data = this.data.filter(u => !this.isName(u.Name, name));
+                this.saveData();
+                return "removed: " + removed.map(u => u.Name).join(", ");
+            } else {
+                return "no-one by that name is registered";
+            }
+        } else {
+            if (time.match(/^([01][0-9]|2[1-3]):([0-5][0-9])$/)) {
+                var matched = 0;
+                var result = 'Payout time for ' + name + ' added.';
+                for (let i in this.data) {
+                    if (this.isName(this.data[i].Name, name)) {
+                        matched++;
+                        this.data[i].UTC = time;
+                    }
+                }
+                if (matched === 0) {
+                    this.data.push({ Name: name, UTC: time });
+                } else {
+                    result = 'Payout time for ' + matched + ' matching users adjusted.';
+                }
+                this.saveData();
+                return result;
+            } else {
+                return 'Invalid time specification, provide hh:mm (in UTC, 24h clock)';
+            }
+        }
+    }
+
+    isName(a, b) {
+        return a.localeCompare(b, undefined, { sensitivity: 'base' }) === 0;
     }
 
 }
